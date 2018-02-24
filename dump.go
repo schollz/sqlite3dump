@@ -33,9 +33,9 @@ func Dump(dbName string, out io.Writer) (err error) {
 
 	for _, schema := range schemas {
 		if schema.Name == "sqlite_sequence" {
-			fmt.Println(`DELETE FROM "sqlite_sequence";`)
+			out.Write([]byte(`DELETE FROM "sqlite_sequence";` + "\n"))
 		} else if schema.Name == "sqlite3_stat1" {
-			fmt.Println(`ANALYZE "sqlite_master";`)
+			out.Write([]byte(`ANALYZE "sqlite_master";` + "\n"))
 		} else if strings.HasPrefix(schema.Name, "sqlite_") {
 			continue
 			// # NOTE: Virtual table support not implemented
@@ -72,7 +72,7 @@ func Dump(dbName string, out io.Writer) (err error) {
 		return
 	}
 	for _, schema := range schemas {
-		out.Write([]byte(fmt.Sprintf("%s;", schema.SQL)))
+		out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
 	}
 
 	out.Write([]byte("COMMIT;\n"))
