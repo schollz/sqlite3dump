@@ -6,7 +6,7 @@
 </p>
 
 
-This is a Golang port of [Python's `sqlite3 .iterdump()`](https://github.com/python/cpython/blob/3.6/Lib/sqlite3/dump.py) command. This is written to use [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3).
+This is a Golang port of [Python's `sqlite3 .iterdump()`](https://github.com/python/cpython/blob/3.6/Lib/sqlite3/dump.py) command. This is written to use [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3). Both are supposed to be functionally equivalent to `sqlite3 DATABASE .dump`.
 
 # License
 
