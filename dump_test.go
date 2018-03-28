@@ -1,4 +1,4 @@
-package sqlitedump
+package sqlite3dump
 
 import (
 	"bufio"
