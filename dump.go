@@ -81,8 +81,8 @@ func Dump(dbName string, out io.Writer) (err error) {
 	for _, schema := range schemas {
 		out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
 	}
-
 	out.Write([]byte("COMMIT;\n"))
+
 	return
 }
 

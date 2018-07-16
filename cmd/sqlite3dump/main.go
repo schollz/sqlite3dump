@@ -15,7 +15,9 @@ func main() {
 			err = fmt.Errorf("incorrect usage")
 			return
 		}
-		err = sqlite3dump.Dump(os.Args[1], bufio.NewWriter(os.Stdout))
+		f := bufio.NewWriter(os.Stdout)
+		err = sqlite3dump.Dump(os.Args[1], f)
+		f.Flush()
 		return
 	}()
 	if err != nil {
