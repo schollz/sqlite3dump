@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -11,7 +12,13 @@ import (
 
 // Dump will dump the database in an SQL text format into the specified io.Writer.
 // Ported from the Python equivalent: https://github.com/python/cpython/blob/3.6/Lib/sqlite3/dump.py.
+// Returns an error if the database doesn't exist.
 func Dump(dbName string, out io.Writer) (err error) {
+	// return if doesn't exist
+	if _, err = os.Stat(dbName); os.IsNotExist(err) {
+		return
+	}
+
 	db, err := sql.Open("sqlite3", dbName)
 	if err != nil {
 		return
