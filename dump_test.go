@@ -17,4 +17,5 @@ func TestCars(t *testing.T) {
 	out.Flush()
 	pythonOutput, _ := ioutil.ReadFile("testing/python.sql")
 	assert.Equal(t, pythonOutput, b.Bytes())
+	ioutil.WriteFile("out.sql", b.Bytes(), 0644)
 }

@@ -24,6 +24,12 @@ func Dump(dbName string, out io.Writer) (err error) {
 		return
 	}
 	defer db.Close()
+
+	return DumpDB(db, out)
+}
+
+// DumpDB dumps a raw sql.DB
+func DumpDB(db *sql.DB, out io.Writer) (err error) {
 	out.Write([]byte("BEGIN TRANSACTION;\n"))
 
 	// sqlite_master table contains the SQL CREATE statements for the database.
