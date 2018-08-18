@@ -58,7 +58,7 @@ func DumpDB(db *sql.DB, out io.Writer) (err error) {
 			// #        "VALUES('table','{0}','{0}',0,'{1}');".format(
 			// #        qtable,
 			// #        sql.replace("''")))
-		} else if strings.HasSuffix(schema.Name, "_idx") || strings.HasSuffix(schema.Name, "_docsize") || strings.HasSuffix(schema.Name, "_config") || strings.HasSuffix(schema.Name, "_data") || strings.HasSuffix(schema.Name, "_content") {
+		} else if strings.HasSuffix(schema.Name, "_segments") || strings.HasSuffix(schema.Name, "_segdir") || strings.HasSuffix(schema.Name, "_stat") || strings.HasSuffix(schema.Name, "_idx") || strings.HasSuffix(schema.Name, "_docsize") || strings.HasSuffix(schema.Name, "_config") || strings.HasSuffix(schema.Name, "_data") || strings.HasSuffix(schema.Name, "_content") {
 			// these suffixes for tables are from using FTS5, and they should be ignored
 			// because they are automatically created
 			continue
