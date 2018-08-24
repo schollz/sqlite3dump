@@ -19,3 +19,12 @@ func TestCars(t *testing.T) {
 	assert.Equal(t, pythonOutput, b.Bytes())
 	ioutil.WriteFile("out.sql", b.Bytes(), 0644)
 }
+
+func TestMigrate(t *testing.T) {
+	var b bytes.Buffer
+	out := bufio.NewWriter(&b)
+	err := DumpMigration("testing/cars.db", out)
+	assert.Nil(t, err)
+	out.Flush()
+	ioutil.WriteFile("migrate.sql", b.Bytes(), 0644)
+}

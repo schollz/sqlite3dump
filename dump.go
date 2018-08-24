@@ -10,10 +10,27 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type sqlite3dumper struct {
+	migration bool
+}
+
+// DumpMigration will dump the database in an SQL text format
+// and not include creation tables and will include table column names
+func DumpMigration(dbName string, out io.Writer) (err error) {
+	s3d := new(sqlite3dumper)
+	s3d.migration = true
+	return s3d.dump(dbName, out)
+}
+
 // Dump will dump the database in an SQL text format into the specified io.Writer.
 // Ported from the Python equivalent: https://github.com/python/cpython/blob/3.6/Lib/sqlite3/dump.py.
 // Returns an error if the database doesn't exist.
 func Dump(dbName string, out io.Writer) (err error) {
+	s3d := new(sqlite3dumper)
+	return s3d.dump(dbName, out)
+}
+
+func (s3d *sqlite3dumper) dump(dbName string, out io.Writer) (err error) {
 	// return if doesn't exist
 	if _, err = os.Stat(dbName); os.IsNotExist(err) {
 		return
@@ -25,15 +42,20 @@ func Dump(dbName string, out io.Writer) (err error) {
 	}
 	defer db.Close()
 
-	return DumpDB(db, out)
+	return s3d.dumpDB(db, out)
 }
 
 // DumpDB dumps a raw sql.DB
 func DumpDB(db *sql.DB, out io.Writer) (err error) {
+	s3d := new(sqlite3dumper)
+	return s3d.dumpDB(db, out)
+}
+
+func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 	out.Write([]byte("BEGIN TRANSACTION;\n"))
 
 	// sqlite_master table contains the SQL CREATE statements for the database.
-	schemas, err := getSchemas(db, `
+	schemas, err := s3d.getSchemas(db, `
         SELECT "name", "type", "sql"
         FROM "sqlite_master"
             WHERE "sql" NOT NULL AND
@@ -63,13 +85,15 @@ func DumpDB(db *sql.DB, out io.Writer) (err error) {
 			// because they are automatically created
 			continue
 		} else {
-			out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
+			if !s3d.migration {
+				out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
+			}
 		}
 
 		// Build the insert statement for each row of the current table
 		schema.Name = strings.Replace(schema.Name, `"`, `""`, -1)
 		var inserts []string
-		inserts, err = getTableRows(db, schema.Name)
+		inserts, err = s3d.getTableRows(db, schema.Name)
 		if err != nil {
 			return
 		}
@@ -79,7 +103,7 @@ func DumpDB(db *sql.DB, out io.Writer) (err error) {
 	}
 
 	// Now when the type is 'index', 'trigger', or 'view'
-	schemas, err = getSchemas(db, `
+	schemas, err = s3d.getSchemas(db, `
 		SELECT "name", "type", "sql"
         FROM "sqlite_master"
             WHERE "sql" NOT NULL AND
@@ -96,9 +120,9 @@ func DumpDB(db *sql.DB, out io.Writer) (err error) {
 	return
 }
 
-func getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
+func (s3d *sqlite3dumper) getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
 	// first get the column names
-	columnNames, err := pragmaTableInfo(db, tableName)
+	columnNames, err := s3d.pragmaTableInfo(db, tableName)
 	if err != nil {
 		return
 	}
@@ -116,6 +140,16 @@ func getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
 		strings.Join(columnSelects, ","),
 		tableName,
 	)
+	if s3d.migration {
+		q = fmt.Sprintf(`
+		SELECT 'INSERT INTO "%s"(%s) VALUES(%s)' FROM "%s";
+	`,
+			tableName,
+			strings.Join(columnNames, ","),
+			strings.Join(columnSelects, ","),
+			tableName,
+		)
+	}
 
 	stmt, err := db.Prepare(q)
 	if err != nil {
@@ -141,7 +175,7 @@ func getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
 	return
 }
 
-func pragmaTableInfo(db *sql.DB, tableName string) (columnNames []string, err error) {
+func (s3d *sqlite3dumper) pragmaTableInfo(db *sql.DB, tableName string) (columnNames []string, err error) {
 	// sqlite_master table contains the SQL CREATE statements for the database.
 	q := `
         PRAGMA table_info("` + tableName + `")
@@ -179,7 +213,7 @@ type schema struct {
 	SQL  string
 }
 
-func getSchemas(db *sql.DB, q string) (schemas []schema, err error) {
+func (s3d *sqlite3dumper) getSchemas(db *sql.DB, q string) (schemas []schema, err error) {
 	stmt, err := db.Prepare(q)
 	if err != nil {
 		return
