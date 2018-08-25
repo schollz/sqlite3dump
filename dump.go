@@ -16,10 +16,10 @@ type sqlite3dumper struct {
 
 // DumpMigration will dump the database in an SQL text format
 // and not include creation tables and will include table column names
-func DumpMigration(dbName string, out io.Writer) (err error) {
+func DumpMigration(db *sql.DB, out io.Writer) (err error) {
 	s3d := new(sqlite3dumper)
 	s3d.migration = true
-	return s3d.dump(dbName, out)
+	return s3d.dumpDB(db, out)
 }
 
 // Dump will dump the database in an SQL text format into the specified io.Writer.
