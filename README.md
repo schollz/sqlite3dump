@@ -1,7 +1,7 @@
 <p align="center">
 <strong>sqlitedump</strong>
 <br>
-<img src="https://img.shields.io/badge/coverage-80%25-green.svg?style=flat-square" alt="Code Coverage">
+<img src="https://img.shields.io/badge/coverage-79%25-green.svg?style=flat-square" alt="Code Coverage">
 <a href="https://godoc.org/github.com/schollz/sqlitedump"><img src="https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square" alt="Code Coverage"></a>
 </p>
 
