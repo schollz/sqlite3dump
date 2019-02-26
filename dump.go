@@ -201,7 +201,7 @@ func (s3d *sqlite3dumper) pragmaTableInfo(db *sql.DB, tableName string) (columnN
 		if err != nil {
 			return
 		}
-		columnNames = append(columnNames, string((*arr[1].(*interface{})).([]uint8)))
+		columnNames = append(columnNames, string((*arr[1].(*interface{})).(string)))
 	}
 	err = rows.Err()
 	return
