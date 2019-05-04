@@ -203,15 +203,13 @@ func (s3d *sqlite3dumper) pragmaTableInfo(db *sql.DB, tableName string) (columnN
 		}
 		columnNames = append(columnNames,
 			func() (result string) {
-				// this is a dumb hack for a "try-catch" statement
-				// sometimes the headers want strings and panic if uint8, sometimes its the opposite
-				// this way one or the other will work, by incuring a panic
-				defer func() {
-					if r := recover(); r != nil {
-						result = string((*arr[1].(*interface{})).([]uint8))
-					}
-				}()
-				result = string((*arr[1].(*interface{})).(string))
+				// check the type
+				switch (*arr[1].(*interface{})).(type) {
+				case string:
+					result =  string((*arr[1].(*interface{})).(string))
+				case []uint8:
+					result =  string((*arr[1].(*interface{})).([]uint8))
+				}
 				return
 			}(),
 		)
