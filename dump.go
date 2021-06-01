@@ -75,7 +75,7 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 	}
 
 	// sqlite_master table contains the SQL CREATE statements for the database.
-	schemas, err := s3d.getSchemas(db, `
+	tableSchemas, err := s3d.getSchemas(db, `
         SELECT "name", "type", "sql"
         FROM "sqlite_master"
             WHERE "sql" NOT NULL AND
@@ -86,7 +86,25 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 		return err
 	}
 
-	for _, schema := range schemas {
+	// Now when the type is 'index', 'trigger', or 'view'
+	otherSchemas, err := s3d.getSchemas(db, `
+		SELECT "name", "type", "sql"
+        FROM "sqlite_master"
+            WHERE "sql" NOT NULL AND
+            "type" IN ('index', 'trigger', 'view')
+		`)
+	if err != nil {
+		return err
+	}
+
+	if s3d.dropIfExists {
+		allSchemas := append(otherSchemas, tableSchemas...)
+		if err := s3d.writeDropStatements(out, allSchemas); err != nil {
+			return err
+		}
+	}
+
+	for _, schema := range tableSchemas {
 		if schema.Name == "sqlite_sequence" {
 			out.Write([]byte(`DELETE FROM "sqlite_sequence";` + "\n"))
 		} else if schema.Name == "sqlite3_stat1" {
@@ -122,24 +140,7 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 		}
 	}
 
-	// Now when the type is 'index', 'trigger', or 'view'
-	schemas, err = s3d.getSchemas(db, `
-		SELECT "name", "type", "sql"
-        FROM "sqlite_master"
-            WHERE "sql" NOT NULL AND
-            "type" IN ('index', 'trigger', 'view')
-		`)
-	if err != nil {
-		return err
-	}
-
-	if s3d.dropIfExists {
-		if err := s3d.writeDropStatements(out, schemas); err != nil {
-			return err
-		}
-	}
-
-	for _, schema := range schemas {
+	for _, schema := range otherSchemas {
 		out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
 	}
 

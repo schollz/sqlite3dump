@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"database/sql"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCars(t *testing.T) {
@@ -35,4 +37,49 @@ func TestMigrate(t *testing.T) {
 	out.Flush()
 	pythonOutput, _ := ioutil.ReadFile("testdata/migrate.sql")
 	assert.Equal(t, pythonOutput, b.Bytes())
+}
+
+func TestDump(t *testing.T) {
+	cases := map[string]struct {
+		dbFile     string
+		expectFile string
+		options    []Option
+	}{
+		"No Options": {
+			dbFile:     "cars.db",
+			expectFile: "python.sql",
+		},
+		"WithMigration": {
+			dbFile:     "cars.db",
+			expectFile: "migrate.sql",
+			options:    []Option{WithMigration()},
+		},
+		"WithDropIfExists": {
+			dbFile:     "cars.db",
+			expectFile: "drop_if_exists.sql",
+			options:    []Option{WithDropIfExists(true)},
+		},
+		"WithTransaction - false": {
+			dbFile:     "cars.db",
+			expectFile: "without_tx.sql",
+			options:    []Option{WithTransaction(false)},
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			expect, err := ioutil.ReadFile(filepath.Join("testdata", c.expectFile))
+			require.NoError(t, err, "failed to open expect file")
+
+			var b bytes.Buffer
+			out := bufio.NewWriter(&b)
+			dbFilePath := filepath.Join("testdata", c.dbFile)
+			err = Dump(dbFilePath, out, c.options...)
+			require.NoError(t, err)
+			out.Flush()
+
+			got := b.Bytes()
+			assert.Equal(t, expect, got)
+		})
+	}
 }
