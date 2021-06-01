@@ -13,10 +13,10 @@ import (
 func TestCars(t *testing.T) {
 	var b bytes.Buffer
 	out := bufio.NewWriter(&b)
-	err := Dump("testing/cars.db", out)
+	err := Dump("testdata/cars.db", out)
 	assert.Nil(t, err)
 	out.Flush()
-	pythonOutput, _ := ioutil.ReadFile("testing/python.sql")
+	pythonOutput, _ := ioutil.ReadFile("testdata/python.sql")
 	assert.Equal(t, pythonOutput, b.Bytes())
 	ioutil.WriteFile("out.sql", b.Bytes(), 0644)
 }
@@ -25,7 +25,7 @@ func TestMigrate(t *testing.T) {
 	var b bytes.Buffer
 	out := bufio.NewWriter(&b)
 
-	db, err := sql.Open("sqlite3", "testing/cars.db")
+	db, err := sql.Open("sqlite3", "testdata/cars.db")
 	assert.Nil(t, err)
 	defer db.Close()
 
@@ -33,6 +33,6 @@ func TestMigrate(t *testing.T) {
 	assert.Nil(t, err)
 
 	out.Flush()
-	pythonOutput, _ := ioutil.ReadFile("testing/migrate.sql")
+	pythonOutput, _ := ioutil.ReadFile("testdata/migrate.sql")
 	assert.Equal(t, pythonOutput, b.Bytes())
 }

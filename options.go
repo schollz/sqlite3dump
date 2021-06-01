@@ -10,7 +10,7 @@ func WithMigration() Option {
 	}
 }
 
-// WithDropIfExists option drops existing table of index if it already exists.
+// WithDropIfExists option drops existing table or index if it already exists.
 func WithDropIfExists(dropIfExists bool) Option {
 	return func(dumper *sqlite3dumper) {
 		dumper.dropIfExists = dropIfExists
