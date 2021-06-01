@@ -11,22 +11,40 @@ import (
 )
 
 type sqlite3dumper struct {
-	migration bool
+	migration           bool
+	dropIfExists        bool
+	wrapWithTransaction bool
+}
+
+func newSqlite3Dumper(opts ...Option) *sqlite3dumper {
+	dumper := &sqlite3dumper{
+		wrapWithTransaction: true,
+	}
+
+	if len(opts) == 0 {
+		return dumper
+	}
+
+	for _, option := range opts {
+		option(dumper)
+	}
+	return dumper
 }
 
 // DumpMigration will dump the database in an SQL text format
 // and not include creation tables and will include table column names
+//
+// Deprecated, use WithMigration() option instead.
 func DumpMigration(db *sql.DB, out io.Writer) (err error) {
-	s3d := new(sqlite3dumper)
-	s3d.migration = true
+	s3d := newSqlite3Dumper(WithMigration())
 	return s3d.dumpDB(db, out)
 }
 
 // Dump will dump the database in an SQL text format into the specified io.Writer.
 // Ported from the Python equivalent: https://github.com/python/cpython/blob/3.6/Lib/sqlite3/dump.py.
 // Returns an error if the database doesn't exist.
-func Dump(dbName string, out io.Writer) (err error) {
-	s3d := new(sqlite3dumper)
+func Dump(dbName string, out io.Writer, opts ...Option) (err error) {
+	s3d := newSqlite3Dumper(opts...)
 	return s3d.dump(dbName, out)
 }
 
@@ -46,13 +64,15 @@ func (s3d *sqlite3dumper) dump(dbName string, out io.Writer) (err error) {
 }
 
 // DumpDB dumps a raw sql.DB
-func DumpDB(db *sql.DB, out io.Writer) (err error) {
-	s3d := new(sqlite3dumper)
+func DumpDB(db *sql.DB, out io.Writer, opts ...Option) (err error) {
+	s3d := newSqlite3Dumper(opts...)
 	return s3d.dumpDB(db, out)
 }
 
 func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
-	out.Write([]byte("BEGIN TRANSACTION;\n"))
+	if s3d.wrapWithTransaction {
+		out.Write([]byte("BEGIN TRANSACTION;\n"))
+	}
 
 	// sqlite_master table contains the SQL CREATE statements for the database.
 	schemas, err := s3d.getSchemas(db, `
@@ -63,7 +83,7 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
             ORDER BY "name"
 		`)
 	if err != nil {
-		return
+		return err
 	}
 
 	for _, schema := range schemas {
@@ -95,7 +115,7 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 		var inserts []string
 		inserts, err = s3d.getTableRows(db, schema.Name)
 		if err != nil {
-			return
+			return err
 		}
 		for _, insert := range inserts {
 			out.Write([]byte(fmt.Sprintf("%s;\n", insert)))
@@ -110,14 +130,51 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
             "type" IN ('index', 'trigger', 'view')
 		`)
 	if err != nil {
-		return
+		return err
 	}
+
+	if s3d.dropIfExists {
+		if err := s3d.writeDropStatements(out, schemas); err != nil {
+			return err
+		}
+	}
+
 	for _, schema := range schemas {
 		out.Write([]byte(fmt.Sprintf("%s;\n", schema.SQL)))
 	}
-	out.Write([]byte("COMMIT;\n"))
+
+	if s3d.wrapWithTransaction {
+		out.Write([]byte("COMMIT;\n"))
+	}
 
 	return
+}
+
+func (s3d *sqlite3dumper) writeDropStatements(w io.Writer, schemas []schema) (err error) {
+	for _, schema := range schemas {
+		var statement string
+
+		switch schema.Type {
+		case "index":
+			statement = fmt.Sprintf("DROP INDEX IF EXISTS %s;\n", schema.Name)
+		case "table":
+			if strings.HasPrefix(schema.Name, "sqlite_") {
+				// skip system tables
+				continue
+			}
+
+			statement = fmt.Sprintf("DROP TABLE IF EXISTS %s;\n", schema.Name)
+		default:
+			continue
+		}
+
+		_, err = w.Write([]byte(statement))
+		if err != nil {
+			return fmt.Errorf("failed to write '%q': %s", statement, err)
+		}
+	}
+
+	return nil
 }
 
 func (s3d *sqlite3dumper) getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
@@ -206,9 +263,9 @@ func (s3d *sqlite3dumper) pragmaTableInfo(db *sql.DB, tableName string) (columnN
 				// check the type
 				switch (*arr[1].(*interface{})).(type) {
 				case string:
-					result =  string((*arr[1].(*interface{})).(string))
+					result = string((*arr[1].(*interface{})).(string))
 				case []uint8:
-					result =  string((*arr[1].(*interface{})).([]uint8))
+					result = string((*arr[1].(*interface{})).([]uint8))
 				}
 				return
 			}(),
