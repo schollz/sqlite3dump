@@ -1,5 +1,7 @@
 module github.com/schollz/sqlite3dump
 
+go 1.16
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mattn/go-sqlite3 v1.9.0
