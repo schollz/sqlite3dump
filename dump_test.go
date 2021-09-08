@@ -6,11 +6,18 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func assertEqualIgnoreLineSeparators(t *testing.T, expected []byte, actual []byte) {
+	expectedStr := strings.ReplaceAll(string(expected), "\r\n", "\n")
+	actualStr := strings.ReplaceAll(string(actual), "\r\n", "\n")
+	assert.Equal(t, expectedStr, actualStr)
+}
 
 func TestCars(t *testing.T) {
 	var b bytes.Buffer
@@ -19,7 +26,7 @@ func TestCars(t *testing.T) {
 	assert.Nil(t, err)
 	out.Flush()
 	pythonOutput, _ := ioutil.ReadFile("testdata/python.sql")
-	assert.Equal(t, pythonOutput, b.Bytes())
+	assertEqualIgnoreLineSeparators(t, pythonOutput, b.Bytes())
 	ioutil.WriteFile("out.sql", b.Bytes(), 0644)
 }
 
@@ -36,7 +43,7 @@ func TestMigrate(t *testing.T) {
 
 	out.Flush()
 	pythonOutput, _ := ioutil.ReadFile("testdata/migrate.sql")
-	assert.Equal(t, pythonOutput, b.Bytes())
+	assertEqualIgnoreLineSeparators(t, pythonOutput, b.Bytes())
 }
 
 func TestDump(t *testing.T) {
@@ -79,7 +86,7 @@ func TestDump(t *testing.T) {
 			out.Flush()
 
 			got := b.Bytes()
-			assert.Equal(t, expect, got)
+			assertEqualIgnoreLineSeparators(t, expect, got)
 		})
 	}
 }
