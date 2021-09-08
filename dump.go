@@ -130,7 +130,7 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 
 		// Build the insert statement for each row of the current table
 		schema.Name = strings.Replace(schema.Name, `"`, `""`, -1)
-		err = s3d.getTableRows(out, db, schema.Name)
+		err = s3d.writeInsStmtsForTableRows(out, db, schema.Name)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (s3d *sqlite3dumper) writeDropStatements(w io.Writer, schemas []schema) (er
 	return nil
 }
 
-func (s3d *sqlite3dumper) getTableRows(w io.Writer, db *sql.DB, tableName string) (err error) {
+func (s3d *sqlite3dumper) writeInsStmtsForTableRows(w io.Writer, db *sql.DB, tableName string) (err error) {
 	// first get the column names
 	columnNames, err := s3d.pragmaTableInfo(db, tableName)
 	if err != nil {
