@@ -130,13 +130,9 @@ func (s3d *sqlite3dumper) dumpDB(db *sql.DB, out io.Writer) (err error) {
 
 		// Build the insert statement for each row of the current table
 		schema.Name = strings.Replace(schema.Name, `"`, `""`, -1)
-		var inserts []string
-		inserts, err = s3d.getTableRows(db, schema.Name)
+		err = s3d.writeInsStmtsForTableRows(out, db, schema.Name)
 		if err != nil {
 			return err
-		}
-		for _, insert := range inserts {
-			out.Write([]byte(fmt.Sprintf("%s;\n", insert)))
 		}
 	}
 
@@ -178,7 +174,7 @@ func (s3d *sqlite3dumper) writeDropStatements(w io.Writer, schemas []schema) (er
 	return nil
 }
 
-func (s3d *sqlite3dumper) getTableRows(db *sql.DB, tableName string) (inserts []string, err error) {
+func (s3d *sqlite3dumper) writeInsStmtsForTableRows(w io.Writer, db *sql.DB, tableName string) (err error) {
 	// first get the column names
 	columnNames, err := s3d.pragmaTableInfo(db, tableName)
 	if err != nil {
@@ -220,17 +216,18 @@ func (s3d *sqlite3dumper) getTableRows(db *sql.DB, tableName string) (inserts []
 	}
 	defer rows.Close()
 
-	inserts = []string{}
 	for rows.Next() {
 		var insert string
 		err = rows.Scan(&insert)
 		if err != nil {
 			return
 		}
-		inserts = append(inserts, insert)
+		_, err = w.Write([]byte(fmt.Sprintf("%s;\n", insert)))
+		if err != nil {
+			return
+		}
 	}
-	err = rows.Err()
-	return
+	return rows.Err()
 }
 
 func (s3d *sqlite3dumper) pragmaTableInfo(db *sql.DB, tableName string) (columnNames []string, err error) {
